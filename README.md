@@ -14,9 +14,11 @@ It also provides endpoints to retrieve, filter, and delete stored profiles.
 
 ## External APIs Used
 
-- Gender prediction → https://api.genderize.io  
-- Age prediction → https://api.agify.io  
-- Nationality prediction → https://api.nationalize.io  
+- Gender prediction → https://api.genderize.io?name={name}
+- Age prediction → https://api.agify.io?name={name}
+- Nationality prediction → https://api.nationalize.io?name={name}
+
+Each API requires a `name` query parameter to return results.
 
 ---
 
@@ -102,7 +104,14 @@ Request:
 Response:
 {
   "status": "success",
-  "data": { ... }
+  "data": {
+    "id": "uuid-v7",
+    "name": "ella",
+    "gender": "female",
+    "age": 45,
+    "age_group": "adult",
+    "country_id": "NG"
+  }
 }
 
 If profile already exists:
@@ -122,9 +131,9 @@ GET /api/profiles
 
 Optional query parameters:
 
-gender, 
-country_id, 
-age_group
+- gender
+- country_id
+- age_group
 
 Example:
 /api/profiles?gender=male&country_id=NG
