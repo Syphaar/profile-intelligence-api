@@ -111,11 +111,12 @@ If profile already exists:
   "message": "Profile already exists",
   "data": { ... }
 }
-2. Get Single Profile
+
+### 2. Get Single Profile
 
 GET /api/profiles/:id
 
-3. Get All Profiles
+### 3. Get All Profiles
 
 GET /api/profiles
 
@@ -128,7 +129,7 @@ age_group
 Example:
 /api/profiles?gender=male&country_id=NG
 
-4. Delete Profile
+### 4. Delete Profile
 
 DELETE /api/profiles/:id
 
