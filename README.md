@@ -122,8 +122,8 @@ GET /api/profiles
 
 Optional query parameters:
 
-gender
-country_id
+gender, 
+country_id, 
 age_group
 
 Example:
@@ -135,3 +135,45 @@ DELETE /api/profiles/:id
 
 Returns:
 204 No Content
+
+---
+
+## Error Handling
+
+All errors follow this structure:
+{
+  "status": "error",
+  "message": "Error message"
+}
+External API Failures
+{
+  "status": "error",
+  "message": "Genderize returned an invalid response"
+}
+
+---
+
+## Testing
+
+You can test the API using:
+
+- Postman
+- Thunder Client
+
+---
+
+## Evaluation Focus
+
+This project demonstrates:
+
+- API design
+- Data persistence
+- External API integration
+- Error handling
+- Clean architecture (controllers, services, utils)
+
+---
+
+## Author
+
+Built by Sifon Emmanuel
