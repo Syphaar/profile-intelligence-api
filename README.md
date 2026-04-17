@@ -2,6 +2,16 @@
 
 A backend API that analyzes a person's name using multiple external data sources and stores the result in PostgreSQL through Prisma ORM. This project was built as part of the Backend Wizards Stage 1 assessment.
 
+Live API: https://profile-intelligence-api.vercel.app/
+
+## Live Demo
+
+- Base URL: `https://profile-intelligence-api.vercel.app/`
+- Health check: `GET https://profile-intelligence-api.vercel.app/`
+- Create profile: `POST https://profile-intelligence-api.vercel.app/api/profiles`
+- Get all profiles: `GET https://profile-intelligence-api.vercel.app/api/profiles`
+- Get single profile: `GET https://profile-intelligence-api.vercel.app/api/profiles/:id`
+
 ---
 
 ## Overview
