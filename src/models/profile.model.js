@@ -1,21 +1,80 @@
-// Defines how profile data is stored in MongoDB
-import mongoose from "mongoose";
+import prisma from "../lib/prisma.js";
 
-const profileSchema = new mongoose.Schema({
-  id: { type: String, required: true },
-  name: { type: String, unique: true },
+const normalizeProfile = (profile) => {
+  if (!profile) {
+    return null;
+  }
 
-  gender: String,
-  gender_probability: Number,
-  sample_size: Number,
+  return {
+    ...profile,
+    created_at:
+      profile.created_at instanceof Date
+        ? profile.created_at.toISOString()
+        : profile.created_at
+  };
+};
 
-  age: Number,
-  age_group: String,
+const Profile = {
+  async findByName(name) {
+    const profile = await prisma.profile.findUnique({
+      where: { name }
+    });
 
-  country_id: String,
-  country_probability: Number,
+    return normalizeProfile(profile);
+  },
 
-  created_at: String
-});
+  async findById(id) {
+    const profile = await prisma.profile.findUnique({
+      where: { id }
+    });
 
-export default mongoose.model("Profile", profileSchema);
+    return normalizeProfile(profile);
+  },
+
+  async create(profile) {
+    const createdProfile = await prisma.profile.create({
+      data: {
+        ...profile,
+        created_at: new Date(profile.created_at)
+      }
+    });
+
+    return normalizeProfile(createdProfile);
+  },
+
+  async findAll(filter = {}) {
+    return prisma.profile.findMany({
+      where: filter,
+      select: {
+        id: true,
+        name: true,
+        gender: true,
+        age: true,
+        age_group: true,
+        country_id: true
+      },
+      orderBy: {
+        created_at: "desc"
+      }
+    });
+  },
+
+  async deleteById(id) {
+    const profile = await prisma.profile.findUnique({
+      where: { id },
+      select: { id: true }
+    });
+
+    if (!profile) {
+      return null;
+    }
+
+    await prisma.profile.delete({
+      where: { id }
+    });
+
+    return profile;
+  }
+};
+
+export default Profile;

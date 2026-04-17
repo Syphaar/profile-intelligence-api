@@ -1,52 +1,18 @@
-// // Starts the server and connects to DB
+import "dotenv/config";
+import { configureDatabaseUrl } from "./src/config/env.js";
 
-// import dotenv from "dotenv";
-// import app from "./src/app.js";
-// import { connectDB } from "./src/config/db.js";
+configureDatabaseUrl();
 
-// dotenv.config();
-
-// // Connect MongoDB before starting server
-// connectDB();
-
-// const PORT = process.env.PORT || 5000;
-
-// // Start Express server
-// app.listen(PORT, () => {
-//   console.log(`Server running on port ${PORT}`);
-// });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Starts the server and connects to DB
-
-import dotenv from "dotenv";
-import app from "./src/app.js";
-import { connectDB } from "./src/config/db.js";
-
-dotenv.config();
+const [{ default: app }, { connectDB }] = await Promise.all([
+  import("./src/app.js"),
+  import("./src/config/db.js")
+]);
 
 const PORT = process.env.PORT || 5000;
 
-// Start server only AFTER DB connection
 const startServer = async () => {
   try {
-    await connectDB(); // IMPORTANT FIX
+    await connectDB();
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);

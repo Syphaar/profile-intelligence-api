@@ -21,8 +21,7 @@ export const createProfile = async (req, res) => {
     const normalizedName = name.trim().toLowerCase();
 
     // 2. Idempotency Check (Duplicate)
-    // We select "-_id -__v" to hide them from the user
-    const existing = await Profile.findOne({ name: normalizedName }).select("-_id -__v");
+    const existing = await Profile.findByName(normalizedName);
 
     if (existing) {
       return res.status(200).json({
@@ -70,15 +69,9 @@ export const createProfile = async (req, res) => {
       created_at: new Date().toISOString()
     });
 
-    // 6. Final Clean-up for the 201 Response
-    // Converts Mongoose document to plain object and removes internal keys
-    const result = profile.toObject();
-    delete result._id;
-    delete result.__v;
-
     return res.status(201).json({
       status: "success",
-      data: result
+      data: profile
     });
 
   } catch (error) {
@@ -91,54 +84,70 @@ export const createProfile = async (req, res) => {
 
 // GET SINGLE PROFILE
 export const getProfile = async (req, res) => {
-  // Use .select("-_id -__v") to ensure specific response structure
-  const profile = await Profile.findOne({ id: req.params.id }).select("-_id -__v");
+  try {
+    const profile = await Profile.findById(req.params.id);
 
-  if (!profile) {
-    return res.status(404).json({
+    if (!profile) {
+      return res.status(404).json({
+        status: "error",
+        message: "Profile not found"
+      });
+    }
+
+    return res.status(200).json({
+      status: "success",
+      data: profile
+    });
+  } catch (error) {
+    return res.status(500).json({
       status: "error",
-      message: "Profile not found"
+      message: error.message
     });
   }
-
-  return res.status(200).json({
-    status: "success",
-    data: profile
-  });
 };
 
 // GET ALL PROFILES (FIXED PROJECTION FOR GRADING)
 export const getProfiles = async (req, res) => {
-  const { gender, country_id, age_group } = req.query;
-  let filter = {};
+  try {
+    const { gender, country_id, age_group } = req.query;
+    const filter = {};
 
-  if (gender) filter.gender = gender.toLowerCase();
-  if (country_id) filter.country_id = country_id.toUpperCase();
-  if (age_group) filter.age_group = age_group.toLowerCase();
+    if (gender) filter.gender = gender.toLowerCase();
+    if (country_id) filter.country_id = country_id.toUpperCase();
+    if (age_group) filter.age_group = age_group.toLowerCase();
 
-  // Returns ONLY the specific fields requested in the task
-  const profiles = await Profile.find(filter).select(
-    "id name gender age age_group country_id -_id"
-  );
+    const profiles = await Profile.findAll(filter);
 
-  return res.json({
-    status: "success",
-    count: profiles.length,
-    data: profiles
-  });
+    return res.json({
+      status: "success",
+      count: profiles.length,
+      data: profiles
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "error",
+      message: error.message
+    });
+  }
 };
 
 // DELETE PROFILE
 export const deleteProfile = async (req, res) => {
-  const deleted = await Profile.findOneAndDelete({ id: req.params.id });
+  try {
+    const deleted = await Profile.deleteById(req.params.id);
 
-  if (!deleted) {
-    return res.status(404).json({
+    if (!deleted) {
+      return res.status(404).json({
+        status: "error",
+        message: "Profile not found"
+      });
+    }
+
+    return res.status(204).send();
+  } catch (error) {
+    return res.status(500).json({
       status: "error",
-      message: "Profile not found"
+      message: error.message
     });
   }
-
-  // 204 No Content for success
-  return res.status(204).send();
 };
