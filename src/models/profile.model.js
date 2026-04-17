@@ -1,4 +1,5 @@
 import prisma from "../lib/prisma.js";
+import { roundUpToTwoDecimalPlaces } from "../utils/helpers.js";
 
 const normalizeProfile = (profile) => {
   if (!profile) {
@@ -7,6 +8,7 @@ const normalizeProfile = (profile) => {
 
   return {
     ...profile,
+    country_probability: roundUpToTwoDecimalPlaces(profile.country_probability),
     created_at:
       profile.created_at instanceof Date
         ? profile.created_at.toISOString()

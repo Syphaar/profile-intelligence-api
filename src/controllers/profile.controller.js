@@ -1,6 +1,10 @@
 import Profile from "../models/profile.model.js";
 import { fetchExternalData } from "../services/externalApis.service.js";
-import { getAgeGroup, getTopCountry } from "../utils/helpers.js";
+import {
+  getAgeGroup,
+  getTopCountry,
+  roundUpToTwoDecimalPlaces
+} from "../utils/helpers.js";
 import { externalApiError } from "../utils/errors.js";
 import { v7 as uuidv7 } from "uuid";
 
@@ -65,7 +69,7 @@ export const createProfile = async (req, res) => {
       age: age.age,
       age_group: getAgeGroup(age.age),
       country_id: topCountry.country_id,
-      country_probability: topCountry.probability,
+      country_probability: roundUpToTwoDecimalPlaces(topCountry.probability),
       created_at: new Date().toISOString()
     });
 

@@ -16,3 +16,11 @@ export const getTopCountry = (countries) => {
     current.probability > prev.probability ? current : prev
   );
 };
+
+export const roundUpToTwoDecimalPlaces = (value) => {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return value;
+  }
+
+  return Math.ceil(value * 100) / 100;
+};
