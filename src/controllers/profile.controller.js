@@ -1,4 +1,5 @@
 import Profile from "../models/profile.model.js";
+import { Prisma } from "@prisma/client";
 import { fetchExternalData } from "../services/externalApis.service.js";
 import {
   getAgeGroup,
@@ -14,15 +15,23 @@ export const createProfile = async (req, res) => {
     const { name } = req.body;
 
     // 1. Validate input
-    if (!name) {
-        return res.status(400).json({ status: "error", message: "Missing or empty name" });
+    if (name === undefined) {
+      return res
+        .status(400)
+        .json({ status: "error", message: "Missing or empty name" });
     }
 
     if (typeof name !== "string") {
-        return res.status(422).json({ status: "error", message: "Invalid type" });
+      return res.status(422).json({ status: "error", message: "Invalid type" });
     }
 
     const normalizedName = name.trim().toLowerCase();
+
+    if (!normalizedName) {
+      return res
+        .status(400)
+        .json({ status: "error", message: "Missing or empty name" });
+    }
 
     // 2. Idempotency Check (Duplicate)
     const existing = await Profile.findByName(normalizedName);
@@ -40,7 +49,7 @@ export const createProfile = async (req, res) => {
     try {
       data = await fetchExternalData(normalizedName);
     } catch (err) {
-      return res.status(502).json(externalApiError("External API"));
+      return res.status(502).json(externalApiError(err.apiName));
     }
 
     const { gender, age, nationality } = data;
@@ -79,6 +88,21 @@ export const createProfile = async (req, res) => {
     });
 
   } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      const existing = await Profile.findByName(req.body.name.trim().toLowerCase());
+
+      if (existing) {
+        return res.status(200).json({
+          status: "success",
+          message: "Profile already exists",
+          data: existing
+        });
+      }
+    }
+
     return res.status(500).json({
       status: "error",
       message: error.message

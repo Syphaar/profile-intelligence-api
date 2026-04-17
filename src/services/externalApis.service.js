@@ -1,17 +1,27 @@
 // Handles all external API calls (Genderize, Agify, Nationalize)
 import axios from "axios";
 
+const fetchApi = async (apiName, url) => {
+  try {
+    const response = await axios.get(url);
+    return response.data;
+  } catch (error) {
+    error.apiName = apiName;
+    throw error;
+  }
+};
+
 export const fetchExternalData = async (name) => {
   // Call all APIs in parallel for performance
-  const [genderRes, ageRes, countryRes] = await Promise.all([
-    axios.get(`https://api.genderize.io?name=${name}`),
-    axios.get(`https://api.agify.io?name=${name}`),
-    axios.get(`https://api.nationalize.io?name=${name}`)
+  const [gender, age, nationality] = await Promise.all([
+    fetchApi("Genderize", `https://api.genderize.io?name=${name}`),
+    fetchApi("Agify", `https://api.agify.io?name=${name}`),
+    fetchApi("Nationalize", `https://api.nationalize.io?name=${name}`)
   ]);
 
   return {
-    gender: genderRes.data,
-    age: ageRes.data,
-    nationality: countryRes.data
+    gender,
+    age,
+    nationality
   };
 };
