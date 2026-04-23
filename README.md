@@ -1,228 +1,205 @@
 # Profile Intelligence API
 
-A backend API that analyzes a person's name using multiple external data sources and stores the result in PostgreSQL through Prisma ORM. This project was built as part of the Backend Wizards Stage 1 assessment.
+Backend API for Insighta Labs' Stage 2 Intelligence Query Engine assessment. It stores demographic profiles in PostgreSQL with Prisma, supports combined filtering, sorting, pagination, and includes a rule-based natural language search endpoint.
 
-Live API: https://profile-intelligence-api.vercel.app/
+Live API: `https://profile-intelligence-api.vercel.app/`
 
-## Live Demo
-
-- Base URL: `https://profile-intelligence-api.vercel.app/`
-- Health check: `GET https://profile-intelligence-api.vercel.app/`
-- Create profile: `POST https://profile-intelligence-api.vercel.app/api/profiles`
-- Get all profiles: `GET https://profile-intelligence-api.vercel.app/api/profiles`
-- Get single profile: `GET https://profile-intelligence-api.vercel.app/api/profiles/:id`
-
----
-
-## Overview
-
-The Profile Intelligence API accepts a name, fetches data from three public APIs, processes the results, and stores a structured profile in PostgreSQL through Prisma ORM.
-
-It also provides endpoints to retrieve, filter, and delete stored profiles.
-
----
-
-## External APIs Used
-
-- Gender prediction -> https://api.genderize.io?name={name}
-- Age prediction -> https://api.agify.io?name={name}
-- Nationality prediction -> https://api.nationalize.io?name={name}
-
-Each API requires a `name` query parameter to return results.
-
----
-
-## Features
-
-- Calls multiple external APIs in parallel
-- Classifies age into groups:
-  - child (0-12)
-  - teenager (13-19)
-  - adult (20-59)
-  - senior (60+)
-- Selects the most probable country from nationality data
-- Prevents duplicate profile creation (idempotency)
-- Stores structured data in PostgreSQL
-- Supports filtering by gender, country, and age group
-- Handles external API failures gracefully
-- Switches database connections dynamically for development and production
-
----
-
-## Tech Stack
+## Stack
 
 - Node.js
-- Express.js
+- Express
 - PostgreSQL
 - Prisma ORM
-- Axios
 - UUID v7
 
----
-
-## Project Structure
-
-```text
-profile-intelligence-api/
-|-- src/
-|   |-- config/
-|   |   `-- db.js
-|   |-- controllers/
-|   |   `-- profile.controller.js
-|   |-- models/
-|   |   `-- profile.model.js
-|   |-- routes/
-|   |   `-- profile.routes.js
-|   |-- services/
-|   |   `-- externalApis.service.js
-|   |-- utils/
-|   |   |-- helpers.js
-|   |   `-- errors.js
-|   `-- app.js
-|-- server.js
-|-- .env
-|-- .gitignore
-`-- package.json
-```
-
-## Installation & Run
+## Setup
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/your-username/profile-intelligence-api.git
-cd profile-intelligence-api
-
-# 2. Install dependencies
 npm install
-
-# 3. Create a .env file
-PORT=5000
-NODE_ENV=development
-DATABASE_URL_DEV=postgresql://postgres:password@localhost:5432/profile_intelligence_dev
-DATABASE_URL_PROD=postgresql://postgres:password@localhost:5432/profile_intelligence_prod
-PG_SSL=false
-
-# 4. Start the server
 npm run prisma:generate
 npm run prisma:push
+node prisma/seed.js
 npm start
 ```
 
-## API Endpoints
+Environment variables:
 
-### 1. Create Profile
-
-`POST /api/profiles`
-
-Request:
-
-```json
-{
-  "name": "ella"
-}
+```bash
+PORT=5000
+NODE_ENV=development
+DATABASE_URL_DEV=postgresql://...
+DATABASE_URL_PROD=postgresql://...
 ```
 
-Response:
+## Seed Data
 
-```json
-{
-  "status": "success",
-  "data": {
-    "id": "uuid-v7",
-    "name": "ella",
-    "gender": "female",
-    "gender_probability": 0.99,
-    "sample_size": 12345,
-    "age": 45,
-    "age_group": "adult",
-    "country_id": "NG",
-    "country_probability": 0.81,
-    "created_at": "2026-04-17T12:00:00.000Z"
-  }
-}
-```
+The seed script reads [prisma/data.json](./prisma/data.json), inserts all 2026 profiles, and uses `upsert` on the unique `name` field so rerunning the script does not create duplicates.
 
-If profile already exists:
+## Endpoints
 
-```json
-{
-  "status": "success",
-  "message": "Profile already exists",
-  "data": {}
-}
-```
+### `POST /api/profiles`
 
-### 2. Get Single Profile
+Creates a profile from external demographic APIs.
 
-`GET /api/profiles/:id`
+### `GET /api/profiles`
 
-### 3. Get All Profiles
+Supports:
 
-`GET /api/profiles`
-
-Optional query parameters:
-
-- `gender`
-- `country_id`
-- `age_group`
+- filters: `gender`, `age_group`, `country_id`, `min_age`, `max_age`, `min_gender_probability`, `min_country_probability`
+- sorting: `sort_by=age|created_at|gender_probability`, `order=asc|desc`
+- pagination: `page` default `1`, `limit` default `10`, max `50`
 
 Example:
 
-`/api/profiles?gender=male&country_id=NG`
+```text
+/api/profiles?gender=male&country_id=NG&min_age=25&sort_by=age&order=desc&page=1&limit=10
+```
 
-### 4. Delete Profile
+### `GET /api/profiles/search`
 
-`DELETE /api/profiles/:id`
+Accepts plain English through `q` and converts it into filters using a rule-based parser.
 
-Returns:
+Example:
 
-`204 No Content`
+```text
+/api/profiles/search?q=adult males from kenya&page=1&limit=10
+```
 
----
+### `GET /api/profiles/:id`
 
-## Error Handling
+Returns a single profile.
 
-All errors follow this structure:
+### `DELETE /api/profiles/:id`
+
+Deletes a single profile.
+
+## Natural Language Parsing Approach
+
+This project uses rule-based parsing only. No AI, LLM, embeddings, or external NLP service is used.
+
+The parser:
+
+1. lowercases the input query
+2. checks for supported gender keywords
+3. checks for age-group keywords
+4. checks for age-range phrases using regex
+5. checks country names and maps them to ISO country codes
+6. returns a filter object only if at least one supported rule matched
+
+### Supported keywords and mappings
+
+Gender:
+
+- `male`, `males` -> `gender=male`
+- `female`, `females` -> `gender=female`
+- when both appear, gender is left unset
+
+Age groups:
+
+- `child`, `children` -> `age_group=child`
+- `teenager`, `teenagers` -> `age_group=teenager`
+- `adult`, `adults` -> `age_group=adult`
+- `senior`, `seniors` -> `age_group=senior`
+- `young` -> `min_age=16`, `max_age=24`
+
+Numeric age phrases:
+
+- `above N`
+- `over N`
+- `older than N`
+- `at least N`
+- `below N`
+- `under N`
+- `younger than N`
+- `at most N`
+
+Countries:
+
+- country names are matched from the internal country map and converted to `country_id`
+- example: `nigeria -> NG`, `angola -> AO`, `kenya -> KE`
+
+### Example interpretations
+
+- `young males` -> `gender=male`, `min_age=16`, `max_age=24`
+- `females above 30` -> `gender=female`, `min_age=30`
+- `people from angola` -> `country_id=AO`
+- `adult males from kenya` -> `gender=male`, `age_group=adult`, `country_id=KE`
+- `male and female teenagers above 17` -> `age_group=teenager`, `min_age=17`
+
+If nothing supported can be extracted, the API returns:
 
 ```json
 {
   "status": "error",
-  "message": "Error message"
+  "message": "Unable to interpret query"
 }
 ```
 
-External API failures:
+## Validation
+
+`GET /api/profiles` validates:
+
+- allowed query keys only
+- `gender` values
+- `age_group` values
+- ISO 2-letter `country_id`
+- numeric age filters
+- probability filters between `0` and `1`
+- allowed `sort_by`
+- allowed `order`
+- positive integer `page` and `limit`
+- `min_age <= max_age`
+
+Invalid list query params return:
 
 ```json
 {
   "status": "error",
-  "message": "Genderize returned an invalid response"
+  "message": "Invalid query parameters"
 }
 ```
 
----
+`GET /api/profiles/search` validates:
 
-## Testing
+- required non-empty `q`
+- positive integer `page`
+- positive integer `limit`
+- no unsupported query keys
 
-You can test the API using:
+## Error Format
 
-- Postman
-- Thunder Client
+All errors use:
 
----
+```json
+{
+  "status": "error",
+  "message": "<error message>"
+}
+```
 
-## Evaluation Focus
+Status usage:
 
-This project demonstrates:
+- `400` -> missing or empty parameter, or uninterpretable natural language query
+- `422` -> invalid parameter type or invalid query parameters
+- `404` -> profile not found
+- `500` / `502` -> server or upstream failure
 
-- API design
-- Data persistence
-- External API integration
-- Error handling
-- Clean architecture (controllers, services, utils)
+## CORS and Timestamps
 
----
+- `Access-Control-Allow-Origin: *` is enabled with `cors`
+- timestamps are returned in UTC ISO 8601 format
 
-## Author
+## Performance Notes
 
-Built by Sifon Emmanuel
+- Prisma queries apply filters directly in SQL
+- sorting and pagination are pushed to the database
+- indexes were added for the main filter and sort columns
+- list and search endpoints use `findMany` plus `count` with the same `where` clause instead of loading full tables into memory
+
+## Limitations
+
+- The natural language parser only supports the explicit keywords and regex patterns described above.
+- It does not handle typos, misspellings, or broad synonyms outside the supported list.
+- It does not parse sorting instructions from plain English.
+- It extracts only one country per query.
+- It does not understand advanced boolean logic beyond the simple supported patterns.
