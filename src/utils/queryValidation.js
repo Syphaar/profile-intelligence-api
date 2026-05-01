@@ -2,6 +2,7 @@ const PROFILE_FILTER_KEYS = new Set([
   "gender",
   "age_group",
   "country_id",
+  "country_nam",
   "min_age",
   "max_age",
   "min_gender_probability",

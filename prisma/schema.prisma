@@ -4,7 +4,33 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL_PROD")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  name         String?
+  avatar       String?
+  githubId     String?   @unique
+  role         String    // admin | analyst
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime? @default(now())
+  createdAt    DateTime  @default(now())
+
+  logs         AuditLog[]
+  refreshTokens RefreshToken[]
+}
+
+model AuditLog {
+  id        String @id @default(uuid())
+  action    String
+  userId    String
+  timestamp DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Profile {
@@ -27,4 +53,15 @@ model Profile {
   @@index([country_probability])
   @@index([created_at])
   @@map("profiles")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

@@ -70,6 +70,7 @@ const Profile = {
   },
 
   async findWithFilters({
+    name,
     gender,
     age_group,
     country_id,
@@ -83,6 +84,10 @@ const Profile = {
     limit = 10
   }) {
     const where = {};
+
+    if (name) {
+      where.name = { contains: name };
+    }
 
     if (gender) {
       where.gender = Array.isArray(gender) ? { in: gender } : gender;
@@ -139,6 +144,62 @@ const Profile = {
       page: safePage,
       limit: safeLimit
     };
+  },
+
+  async findAllWithFilters({
+    gender,
+    age_group,
+    country_id,
+    min_age,
+    max_age,
+    min_gender_probability,
+    min_country_probability,
+    sort_by = "created_at",
+    order = "desc"
+  } = {}) {
+    const where = {};
+
+    if (gender) {
+      where.gender = Array.isArray(gender) ? { in: gender } : gender;
+    }
+
+    if (age_group) {
+      where.age_group = age_group;
+    }
+
+    if (country_id) {
+      where.country_id = country_id;
+    }
+
+    if (min_age !== undefined || max_age !== undefined) {
+      where.age = {};
+
+      if (min_age !== undefined) {
+        where.age.gte = Number(min_age);
+      }
+
+      if (max_age !== undefined) {
+        where.age.lte = Number(max_age);
+      }
+    }
+
+    if (min_gender_probability !== undefined) {
+      where.gender_probability = { gte: Number(min_gender_probability) };
+    }
+
+    if (min_country_probability !== undefined) {
+      where.country_probability = { gte: Number(min_country_probability) };
+    }
+
+    const data = await prisma.profile.findMany({
+      where,
+      orderBy: {
+        [sort_by]: order
+      },
+      select: PROFILE_SELECT
+    });
+
+    return data.map(normalizeProfile);
   },
 
   async deleteById(id) {
